@@ -9,6 +9,7 @@ export interface AppState {
   history: HistoryMap;
   goal: number;
   belt: BeltRank;
+  stripes: number; // 0 to 4
 }
 
 export interface StatsRange {
