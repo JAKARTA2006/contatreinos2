@@ -5,10 +5,11 @@ import {
   Trash2, 
   Plus, 
   Settings, 
-  Edit3
+  Edit3,
+  List
 } from 'lucide-react';
 import { AppState, BeltRank } from '../types';
-import { todayISO, weekOf, monthOf } from '../utils/dateUtils';
+import { todayISO, weekOf, monthOf, formatDateBr } from '../utils/dateUtils';
 import { BeltDisplay } from '../components/BeltDisplay';
 import { BeltSelector } from '../components/BeltSelector';
 import { StatsGrid } from '../components/StatsGrid';
@@ -172,13 +173,26 @@ export const Home = () => {
             onCancel={() => setIsEditingBelt(false)}
           />
         ) : (
-          <div className="relative group cursor-pointer" onClick={() => setIsEditingBelt(true)}>
-             <BeltDisplay rank={state.belt} stripes={state.stripes} total={state.treinosTotal} />
-             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 rounded-lg">
-                <span className="bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 backdrop-blur-sm">
-                  <Edit3 size={16} /> Alterar Graduação
-                </span>
-             </div>
+          <div className="flex flex-col gap-2">
+            <div className="relative group cursor-pointer" onClick={() => setIsEditingBelt(true)}>
+              <BeltDisplay rank={state.belt} stripes={state.stripes} total={state.treinosTotal} />
+              {/* Hover hint for desktop */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 rounded-lg pointer-events-none">
+                  <span className="bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 backdrop-blur-sm">
+                    <Edit3 size={16} /> Alterar Graduação
+                  </span>
+              </div>
+            </div>
+            
+            {/* Explicit button for mobile/usability */}
+            <div className="flex justify-end">
+              <button 
+                onClick={() => setIsEditingBelt(true)}
+                className="text-xs text-slate-400 hover:text-indigo-400 flex items-center gap-1 px-2 py-1"
+              >
+                <Edit3 size={12} /> Editar Faixa/Graus
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -215,8 +229,45 @@ export const Home = () => {
            </div>
         </section>
 
-        {/* History Chart */}
+        {/* History Chart (Visual) */}
         <HistoryTracker history={state.history} />
+
+        {/* NEW: Detailed History List (Textual) */}
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <h3 className="text-slate-300 font-semibold mb-4 text-xs uppercase tracking-wider flex items-center gap-2">
+            <List size={16} className="text-slate-400" />
+            Detalhamento (Últimos 14 dias)
+          </h3>
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 14 }).map((_, i) => {
+              const d = todayISO(-i);
+              const count = state.history[d] || 0;
+              if (count === 0) return null;
+              
+              return (
+                <div key={d} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-800/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                        <span className="text-slate-200 text-sm font-medium">{formatDateBr(d)}</span>
+                    </div>
+                    <span className="text-emerald-400 font-bold text-sm bg-emerald-900/20 px-2 py-0.5 rounded border border-emerald-900/30">
+                      {count} {count === 1 ? 'Treino' : 'Treinos'}
+                    </span>
+                </div>
+              );
+            })}
+            
+            {/* Empty State */}
+            {Array.from({ length: 14 }).every((_, i) => !state.history[todayISO(-i)]) && (
+                <div className="text-center py-6 text-slate-500 text-sm italic bg-slate-900/30 rounded-lg border border-slate-800/30 border-dashed">
+                    Nenhuma atividade registrada neste período.
+                    <br />
+                    <span className="text-xs opacity-70">Bora treinar? OSS!</span>
+                </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* Actions Panel */}
