@@ -10,6 +10,7 @@ export interface AppState {
   goal: number;
   belt: BeltRank;
   stripes: number; // 0 to 4
+  avatar?: string; // Base64 string of custom user image
 }
 
 export interface StatsRange {

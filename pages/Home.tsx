@@ -6,7 +6,9 @@ import {
   Plus, 
   Settings, 
   Edit3,
-  List
+  List,
+  Camera,
+  X
 } from 'lucide-react';
 import { AppState, BeltRank } from '../types';
 import { todayISO, weekOf, monthOf, formatDateBr } from '../utils/dateUtils';
@@ -26,8 +28,8 @@ export const Home = () => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Ensure backward compatibility for new 'stripes' field
-        return { stripes: 0, ...parsed };
+        // Ensure backward compatibility for new 'stripes' and 'avatar' fields
+        return { stripes: 0, avatar: undefined, ...parsed };
       }
     } catch (e) {
       console.warn('Erro ao ler localStorage', e);
@@ -38,11 +40,13 @@ export const Home = () => {
       goal: 20,
       belt: 'white',
       stripes: 0,
+      avatar: undefined,
     };
   });
 
   const [isEditingBelt, setIsEditingBelt] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Effects ---
   useEffect(() => {
@@ -106,7 +110,7 @@ export const Home = () => {
 
   const handleReset = () => {
     if (!window.confirm('ATENÇÃO: Isso apagará todo o seu histórico. Tem certeza?')) return;
-    setState({ treinosTotal: 0, history: {}, goal: 20, belt: 'white', stripes: 0 });
+    setState({ treinosTotal: 0, history: {}, goal: 20, belt: 'white', stripes: 0, avatar: undefined });
   };
 
   const exportJSON = () => {
@@ -141,6 +145,32 @@ export const Home = () => {
     reader.readAsText(file);
   };
 
+  // --- Image Upload Logic ---
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Limit file size (e.g., ~2MB) to avoid localStorage quota exceeded errors
+    if (file.size > 2 * 1024 * 1024) {
+      alert("A imagem é muito grande. Por favor, escolha uma imagem menor (máx 2MB).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setState(prev => ({ ...prev, avatar: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAvatar = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the upload click
+    if (window.confirm('Remover sua foto e voltar para o avatar padrão?')) {
+      setState(prev => ({ ...prev, avatar: undefined }));
+    }
+  };
+
   // --- Derived Stats ---
   const getStats = () => {
     const today = todayISO();
@@ -166,14 +196,50 @@ export const Home = () => {
       
       {/* Avatar / Character Image */}
       <div className="flex justify-center">
-        <div className="bg-slate-800 p-1.5 rounded-full border border-slate-700 shadow-2xl">
-           <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white overflow-hidden relative group flex items-center justify-center">
-              <img 
-                src={CHARACTER_IMAGE} 
-                alt="Avatar Jiu Jitsu" 
-                className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-700"
-              />
-           </div>
+        <div className="relative">
+          {/* Main Avatar Container */}
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-slate-800 p-1.5 rounded-full border border-slate-700 shadow-2xl cursor-pointer group relative"
+          >
+             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-200 overflow-hidden relative flex items-center justify-center">
+                <img 
+                  src={state.avatar || CHARACTER_IMAGE} 
+                  alt="Avatar Jiu Jitsu" 
+                  className={`w-full h-full ${state.avatar ? 'object-cover' : 'object-contain p-1'} group-hover:scale-105 transition-transform duration-700`}
+                />
+                
+                {/* Overlay on Hover */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="text-white drop-shadow-md" size={32} />
+                </div>
+             </div>
+             
+             {/* Mobile Hint (visible always on small screens if supported, usually relied on the icon) */}
+             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded-full border border-slate-600 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+               Trocar Foto
+             </div>
+          </div>
+
+          {/* Remove Custom Avatar Button */}
+          {state.avatar && (
+            <button 
+              onClick={removeAvatar}
+              className="absolute top-0 right-0 bg-red-600 text-white p-1.5 rounded-full shadow-lg hover:bg-red-500 transition-colors z-10"
+              title="Remover foto personalizada"
+            >
+              <X size={14} />
+            </button>
+          )}
+
+          {/* Hidden File Input */}
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleAvatarUpload}
+            accept="image/*"
+            className="hidden" 
+          />
         </div>
       </div>
 
