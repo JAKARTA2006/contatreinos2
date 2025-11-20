@@ -9,26 +9,34 @@ export const Contact = () => {
         <p className="text-slate-400 mb-8">Tem sugestões ou encontrou um bug? Fale conosco.</p>
 
         <div className="grid gap-4">
-          <a href="#" className="flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors group">
+          {/* Email */}
+          <a href="mailto:jakarta2006@gmail.com" className="flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors group">
             <div className="bg-indigo-500/20 text-indigo-400 p-3 rounded-full group-hover:bg-indigo-500 group-hover:text-white transition-colors">
               <Mail size={24} />
             </div>
             <div>
               <h3 className="font-semibold text-slate-200">Email</h3>
-              <p className="text-sm text-slate-400">suporte@jjtracker.app</p>
+              <p className="text-sm text-slate-400">jakarta2006@gmail.com</p>
             </div>
           </a>
 
-          <a href="#" className="flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors group">
+          {/* WhatsApp */}
+          <a 
+            href="https://wa.me/5511941075088" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors group"
+          >
             <div className="bg-emerald-500/20 text-emerald-400 p-3 rounded-full group-hover:bg-emerald-500 group-hover:text-white transition-colors">
               <MessageCircle size={24} />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-200">WhatsApp</h3>
-              <p className="text-sm text-slate-400">Comunidade Beta Testers</p>
+              <h3 className="font-semibold text-slate-200">Gilmar Silva (WhatsApp)</h3>
+              <p className="text-sm text-slate-400">(11) 94107-5088</p>
             </div>
           </a>
 
+          {/* GitHub (Mantido como placeholder ou pode ser removido se não houver repo público) */}
           <a href="#" className="flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors group">
             <div className="bg-slate-700 text-slate-400 p-3 rounded-full group-hover:bg-white group-hover:text-black transition-colors">
               <Github size={24} />

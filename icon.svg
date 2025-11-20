@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0f172a"/>
+  <circle cx="256" cy="256" r="200" fill="#1e293b" stroke="#4f46e5" stroke-width="20"/>
+  <!-- Kimono simple rep -->
+  <path d="M156 156 L356 156 L406 256 L356 306 L306 256 L256 356 L206 256 L156 306 L106 256 Z" fill="#f8fafc"/>
+  <!-- Belt -->
+  <rect x="186" y="300" width="140" height="40" fill="#000000"/>
+  <rect x="290" y="300" width="30" height="40" fill="#dc2626"/>
+</svg>

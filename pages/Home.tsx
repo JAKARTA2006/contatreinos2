@@ -15,6 +15,7 @@ import { BeltSelector } from '../components/BeltSelector';
 import { StatsGrid } from '../components/StatsGrid';
 import { HistoryTracker } from '../components/HistoryTracker';
 import { exportToPDF } from '../utils/pdfExporter';
+import { CHARACTER_IMAGE } from '../utils/assets';
 
 const STORAGE_KEY = "jj_treinos_v1";
 
@@ -163,6 +164,19 @@ export const Home = () => {
   return (
     <div className="w-full max-w-3xl flex flex-col gap-6 animate-in fade-in duration-500">
       
+      {/* Avatar / Character Image */}
+      <div className="flex justify-center">
+        <div className="bg-slate-800 p-1.5 rounded-full border border-slate-700 shadow-2xl">
+           <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white overflow-hidden relative group flex items-center justify-center">
+              <img 
+                src={CHARACTER_IMAGE} 
+                alt="Avatar Jiu Jitsu" 
+                className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-700"
+              />
+           </div>
+        </div>
+      </div>
+
       {/* Belt Display & Editor */}
       <section>
         {isEditingBelt ? (
@@ -232,7 +246,7 @@ export const Home = () => {
         {/* History Chart (Visual) */}
         <HistoryTracker history={state.history} />
 
-        {/* NEW: Detailed History List (Textual) */}
+        {/* Detailed History List (Textual) */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
           <h3 className="text-slate-300 font-semibold mb-4 text-xs uppercase tracking-wider flex items-center gap-2">
             <List size={16} className="text-slate-400" />
