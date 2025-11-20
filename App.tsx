@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Medal, Share2, Info, Mail, Home as HomeIcon } from 'lucide-react';
+import { Medal, Share2, Info, Mail, Home as HomeIcon, Download } from 'lucide-react';
 
 // Pages
 import { Home } from './pages/Home';
@@ -9,6 +9,37 @@ import { Contact } from './pages/Contact';
 
 function Layout() {
   const location = useLocation();
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      // Show the install prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      // We've used the prompt, and can't use it again, throw it away
+      setDeferredPrompt(null);
+    } else {
+      // Fallback for iOS or if already installed
+      alert('Para instalar no iPhone/iPad: Toque em Compartilhar (no Safari) > Adicionar à Tela de Início.\n\nNo Android (se não abriu automático): Toque nos 3 pontos > Instalar aplicativo.');
+    }
+  };
 
   const getLinkClass = (path: string) => {
     const isActive = location.pathname === path;
@@ -41,14 +72,24 @@ function Layout() {
             <Link to="/contato" className={getLinkClass('/contato')}>
               <Mail size={16} /> Contato
             </Link>
+            {/* Install Button Desktop (if available) */}
+            {deferredPrompt && (
+              <button 
+                onClick={handleInstallClick}
+                className="flex items-center gap-2 px-3 py-2 ml-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Download size={16} /> Instalar App
+              </button>
+            )}
           </nav>
 
-          {/* Mobile Action (only PWA hint, nav is bottom) */}
+          {/* Mobile Action (Install PWA) */}
           <button 
-            onClick={() => alert('Instale como PWA: No Chrome Mobile, toque em Compartilhar > Adicionar à Tela Inicial.')}
-            className="md:hidden text-slate-400 hover:text-white transition-colors"
+            onClick={handleInstallClick}
+            className="md:hidden text-slate-400 hover:text-white transition-colors p-2"
+            title="Instalar App"
           >
-            <Share2 size={20} />
+            {deferredPrompt ? <Download size={20} className="text-emerald-400" /> : <Share2 size={20} />}
           </button>
         </div>
         
