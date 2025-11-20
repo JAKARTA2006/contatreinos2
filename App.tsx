@@ -1,0 +1,284 @@
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { 
+  Download, 
+  Upload, 
+  Trash2, 
+  Plus, 
+  Settings, 
+  Share2,
+  Medal
+} from 'lucide-react';
+import { AppState, BeltRank } from './types';
+import { todayISO, weekOf, monthOf } from './utils/dateUtils';
+import { BeltDisplay } from './components/BeltDisplay';
+import { StatsGrid } from './components/StatsGrid';
+import { HistoryTracker } from './components/HistoryTracker';
+import { exportToPDF } from './utils/pdfExporter';
+
+const STORAGE_KEY = "jj_treinos_v1";
+
+export default function App() {
+  // --- State Management ---
+  const [state, setState] = useState<AppState>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn('Erro ao ler localStorage', e);
+    }
+    return {
+      treinosTotal: 0,
+      history: {},
+      goal: 20,
+      belt: 'white',
+    };
+  });
+
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // --- Effects ---
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Erro ao salvar localStorage', e);
+    }
+  }, [state]);
+
+  useEffect(() => {
+    const computeBelt = (total: number): BeltRank => {
+      if (total >= 500) return 'black';
+      if (total >= 250) return 'brown';
+      if (total >= 120) return 'purple';
+      if (total >= 60) return 'blue';
+      if (total >= 20) return 'gray';
+      return 'white';
+    };
+
+    const nextBelt = computeBelt(state.treinosTotal);
+    if (nextBelt !== state.belt) {
+      setState(s => ({ ...s, belt: nextBelt }));
+    }
+  }, [state.treinosTotal, state.belt]);
+
+  // --- Actions ---
+  const addTreino = useCallback((dateISO: string = todayISO()) => {
+    setState(prev => {
+      const h = { ...prev.history };
+      h[dateISO] = (h[dateISO] || 0) + 1;
+      return {
+        ...prev,
+        treinosTotal: prev.treinosTotal + 1,
+        history: h,
+      };
+    });
+  }, []);
+
+  const removeTreino = useCallback((dateISO: string = todayISO()) => {
+    setState(prev => {
+      const h = { ...prev.history };
+      if (!h[dateISO]) return prev;
+      h[dateISO] = Math.max(0, h[dateISO] - 1);
+      const newTotal = Math.max(0, prev.treinosTotal - 1);
+      return { ...prev, treinosTotal: newTotal, history: h };
+    });
+  }, []);
+
+  const manualAdd = () => {
+    const dateStr = prompt('Data do treino (YYYY-MM-DD):', todayISO());
+    if (!dateStr) return;
+    
+    // Simple validation
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        alert("Formato inválido. Use YYYY-MM-DD");
+        return;
+    }
+
+    const qtyStr = prompt(`Quantos treinos adicionar em ${dateStr}?`, '1');
+    const qty = parseInt(qtyStr || '0', 10);
+    if (!qty || qty <= 0) return;
+
+    setState(prev => {
+      const h = { ...prev.history };
+      h[dateStr] = (h[dateStr] || 0) + qty;
+      return { ...prev, history: h, treinosTotal: prev.treinosTotal + qty };
+    });
+  };
+
+  const handleReset = () => {
+    if (!window.confirm('ATENÇÃO: Isso apagará todo o seu histórico. Tem certeza?')) return;
+    setState({ treinosTotal: 0, history: {}, goal: 20, belt: 'white' });
+  };
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; 
+    a.download = `jj_backup_${todayISO()}.json`; 
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importJSON = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+            const parsed = JSON.parse(result);
+            if (parsed.history && typeof parsed.treinosTotal === 'number') {
+                if (window.confirm('Substituir estado atual com o backup importado?')) {
+                    setState(parsed);
+                }
+            } else {
+                alert("Estrutura do JSON inválida.");
+            }
+        }
+      } catch (err) { 
+          alert('Arquivo inválido ou corrompido.'); 
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // --- Derived Stats ---
+  const getStats = () => {
+    const today = todayISO();
+    const thisWeekStart = weekOf(today);
+    const thisMonth = monthOf(today);
+
+    let day = state.history[today] || 0;
+    let week = 0;
+    let month = 0;
+
+    for (const d in state.history) {
+      if (d >= thisWeekStart && d <= today) week += state.history[d];
+      if (d.slice(0, 7) === thisMonth) month += state.history[d];
+    }
+    return { day, week, month };
+  };
+
+  const stats = getStats();
+  const progressPercent = Math.min(100, Math.round((state.treinosTotal / state.goal) * 100));
+
+  return (
+    <div className="min-h-screen flex flex-col items-center pb-12">
+      
+      {/* Header */}
+      <header className="w-full bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-sm bg-opacity-80">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                <Medal size={20} />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">JJ Tracker</h1>
+          </div>
+          <button 
+            onClick={() => alert('Instale como PWA: No Chrome Mobile, toque em Compartilhar > Adicionar à Tela Inicial.')}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <Share2 size={20} />
+          </button>
+        </div>
+      </header>
+
+      <main className="w-full max-w-3xl px-4 mt-8 flex flex-col gap-6">
+        
+        {/* Belt Display */}
+        <section>
+          <BeltDisplay rank={state.belt} total={state.treinosTotal} />
+        </section>
+
+        {/* Main Dashboard Area (Ref for PDF export) */}
+        <div ref={exportRef} className="flex flex-col gap-6 bg-slate-950"> 
+          {/* Stats Grid */}
+          <StatsGrid 
+            stats={stats} 
+            onAddToday={() => addTreino()} 
+            onRemoveToday={() => removeTreino()} 
+          />
+
+          {/* Goal Progress */}
+          <section className="bg-slate-800 p-5 rounded-xl border border-slate-700">
+             <div className="flex justify-between items-end mb-2">
+                <label className="text-slate-400 text-sm font-medium uppercase tracking-wider">Meta Atual</label>
+                <span className="text-slate-100 font-mono text-sm">{progressPercent}%</span>
+             </div>
+             <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+             </div>
+             <div className="mt-4 flex items-center gap-3">
+                <span className="text-slate-400 text-sm">Definir Meta:</span>
+                <input 
+                  type="number" 
+                  value={state.goal} 
+                  onChange={(e) => setState(s => ({ ...s, goal: parseInt(e.target.value) || 0 }))} 
+                  className="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-white text-sm w-24 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+             </div>
+          </section>
+
+          {/* History Chart */}
+          <HistoryTracker history={state.history} />
+        </div>
+
+        {/* Actions Panel */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+              <h4 className="text-slate-400 text-sm font-bold uppercase mb-1 flex items-center gap-2">
+                <Settings size={16} /> Gestão
+              </h4>
+              
+              <button onClick={manualAdd} className="flex items-center gap-3 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-left text-sm">
+                <div className="bg-indigo-500/20 text-indigo-400 p-1.5 rounded">
+                    <Plus size={16} />
+                </div>
+                <span>Adicionar Data Passada</span>
+              </button>
+
+              <button onClick={handleReset} className="flex items-center gap-3 px-4 py-3 bg-slate-800 hover:bg-red-900/20 rounded-lg transition-colors text-left text-sm group">
+                <div className="bg-red-500/20 text-red-400 p-1.5 rounded group-hover:bg-red-500 group-hover:text-white transition-colors">
+                    <Trash2 size={16} />
+                </div>
+                <span className="text-red-400 group-hover:text-red-300">Resetar Tudo</span>
+              </button>
+           </div>
+
+           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+              <h4 className="text-slate-400 text-sm font-bold uppercase mb-1 flex items-center gap-2">
+                <Download size={16} /> Dados
+              </h4>
+              
+              <button onClick={() => exportToPDF(exportRef.current)} className="flex items-center gap-3 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-left text-sm">
+                <div className="bg-emerald-500/20 text-emerald-400 p-1.5 rounded">
+                    <Download size={16} />
+                </div>
+                <span>Baixar PDF (Relatório)</span>
+              </button>
+
+              <div className="flex gap-2">
+                  <button onClick={exportJSON} className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-xs">
+                    <Download size={14} /> Backup
+                  </button>
+                  
+                  <label className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-xs cursor-pointer">
+                    <Upload size={14} /> Restore
+                    <input type="file" accept=".json" className="hidden" onChange={(e) => e.target.files?.[0] && importJSON(e.target.files[0])} />
+                  </label>
+              </div>
+           </div>
+        </section>
+
+      </main>
+      
+      <footer className="mt-12 text-slate-600 text-xs text-center px-4">
+        <p>Os dados são salvos apenas no seu dispositivo.</p>
+        <p className="mt-1 opacity-50">OSS</p>
+      </footer>
+    </div>
+  );
+}
